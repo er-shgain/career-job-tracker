@@ -572,6 +572,8 @@ export default function App() {
             onResetFilters={clearAllFilters}
           />
 
+          <div className="my-5" />
+
           <JobTable
             isDark={isDark}
             jobs={paginatedTableJobs}
