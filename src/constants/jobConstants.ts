@@ -40,7 +40,6 @@ export const TECH_CITIES = [
   'Chandigarh',
   'Indore',
   'Coimbatore',
-  'Remote (India)',
   'San Francisco',
   'New York',
   'Seattle',
@@ -52,5 +51,6 @@ export const TECH_CITIES = [
   'Dubai',
   'Toronto',
   'Sydney',
+  'Remote (India)',
   'Remote (Global)'
 ];
