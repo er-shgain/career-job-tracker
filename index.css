@@ -1,0 +1,29 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.ant-checkbox-inner {
+  border-width: 1.75px !important;
+  border-color: #64748B !important;
+  border-radius: 4px !important;
+}
+.ant-checkbox-checked .ant-checkbox-inner {
+  border-color: #6366F1 !important;
+  background-color: #6366F1 !important;
+}
+.status-text-select .ant-select-selector {
+  background-color: transparent !important;
+  border-color: var(--stage-border) !important;
+  border-width: 1.25px !important;
+  border-radius: 6px !important;
+  padding-left: 10px !important;
+  padding-right: 28px !important;
+}
+.status-text-select .ant-select-selection-item {
+  color: var(--stage-color) !important;
+  font-weight: 600 !important;
+}
+.status-text-select .ant-select-arrow {
+  color: var(--stage-color) !important;
+}
