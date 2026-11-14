@@ -19,8 +19,8 @@ export const DATE_FILTER_OPTIONS = [
   { value: 'This Week', label: 'This Week' },
   { value: 'This Month', label: 'This Month' },
   { value: 'This Year', label: 'This Year' },
+  { value: 'Custom', label: 'Custom Date' },
   { value: 'Not Applied', label: 'Not Applied' },
-  { value: 'Custom', label: 'Custom Date' }
 ];
 
 export const TECH_CITIES = [
