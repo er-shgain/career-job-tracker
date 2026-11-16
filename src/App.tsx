@@ -95,7 +95,7 @@ export default function App() {
   const [isTrashOpen, setIsTrashOpen] = useState(false);
 
   const [tablePage, setTablePage] = useState(1);
-  const [tablePageSize, setTablePageSize] = useState(25);
+  const [tablePageSize, setTablePageSize] = useState(10);
 
   const [showQuickGuide, setShowQuickGuide] = useState(true);
 
