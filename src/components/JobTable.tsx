@@ -471,7 +471,7 @@ export const JobTable: React.FC<JobTableProps> = ({
                 onClick={() => onPageChange(tablePage - 1, tablePageSize)}
                 icon={<ChevronLeft className="w-4 h-4" />}
               />
-              <span className={`text-[13px] font-medium px-2 min-w-[50px] text-center ${isDark ? 'text-[#F8FAFC]' : 'text-[#0F172A]'}`}>
+              <span className={`text-[13px] font-medium px-2 min-w-12.5 text-center ${isDark ? 'text-[#F8FAFC]' : 'text-[#0F172A]'}`}>
                 {tablePage} / {totalTablePages}
               </span>
               <Button

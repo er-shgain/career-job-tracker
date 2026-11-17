@@ -72,7 +72,8 @@ export default function App() {
   const [workModeFilter, setWorkModeFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
   const [appliedFilter, setAppliedFilter] = useState('All');
-  const [favoriteFilter, setFavoriteFilter] = useState('All');
+  const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [matchOnly, setMatchOnly] = useState(false);
   const [dateFilter, setDateFilter] = useState('All');
   const [customDateRange, setCustomDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [isCustomDatePopoverOpen, setIsCustomDatePopoverOpen] = useState(false);
@@ -122,6 +123,37 @@ export default function App() {
 
   const filteredJobs = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
+
+    const normalizeStr = (val: any) => (val ? String(val).trim().toLowerCase() : '');
+    const normalizeUrl = (val: any) => {
+      let str = normalizeStr(val);
+      if (str) {
+        str = str.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+      }
+      return str;
+    };
+
+    const hasMatch = (job: JobRecord, allJobs: JobRecord[]) => {
+      const jComp = normalizeStr(job.company);
+      const jEmail = normalizeStr((job as any).email || (job as any).companyEmail);
+      const jPhone = normalizeStr((job as any).phone || (job as any).companyPhone);
+      const jUrl = normalizeUrl(job.portalUrl || (job as any).companyUrl || (job as any).url);
+
+      return allJobs.some(other => {
+        if (other.id === job.id) return false;
+        
+        const oComp = normalizeStr(other.company);
+        const oEmail = normalizeStr((other as any).email || (other as any).companyEmail);
+        const oPhone = normalizeStr((other as any).phone || (other as any).companyPhone);
+        const oUrl = normalizeUrl(other.portalUrl || (other as any).companyUrl || (other as any).url);
+
+        return (jComp && oComp && jComp === oComp) ||
+               (jEmail && oEmail && jEmail === oEmail) ||
+               (jPhone && oPhone && jPhone === oPhone) ||
+               (jUrl && oUrl && jUrl === oUrl);
+      });
+    };
+
     return jobs.filter((job) => {
       const effectiveStatus = job.isApplied ? job.status : 'Pending';
 
@@ -130,7 +162,8 @@ export default function App() {
       if (locationFilter !== 'All' && job.location !== locationFilter) return false;
       if (appliedFilter === 'Applied' && !job.isApplied) return false;
       if (appliedFilter === 'Not Applied' && job.isApplied) return false;
-      if (favoriteFilter === 'Favorites' && !job.isFavorite) return false;
+      if (favoriteOnly && !job.isFavorite) return false;
+      if (matchOnly && !hasMatch(job, jobs)) return false;
 
       if (dateFilter === 'Not Applied') {
         if (job.isApplied) return false;
@@ -173,7 +206,7 @@ export default function App() {
 
       return true;
     });
-  }, [jobs, searchQuery, statusFilter, workModeFilter, locationFilter, appliedFilter, favoriteFilter, dateFilter, customDateRange]);
+  }, [jobs, searchQuery, statusFilter, workModeFilter, locationFilter, appliedFilter, favoriteOnly, matchOnly, dateFilter, customDateRange]);
 
   const stats = useMemo(() => {
     let pending = 0;
@@ -203,7 +236,8 @@ export default function App() {
     workModeFilter !== 'All' ||
     locationFilter !== 'All' ||
     appliedFilter !== 'All' ||
-    favoriteFilter !== 'All' ||
+    favoriteOnly ||
+    matchOnly ||
     dateFilter !== 'All' ||
     customDateRange !== null;
 
@@ -213,11 +247,12 @@ export default function App() {
     setWorkModeFilter('All');
     setLocationFilter('All');
     setAppliedFilter('All');
-    setFavoriteFilter('All');
+    setFavoriteOnly(false);
+    setMatchOnly(false);
     setDateFilter('All');
     setCustomDateRange(null);
     setIsCustomDatePopoverOpen(false);
-    setTablePage(1); // Reset page on clear filters
+    setTablePage(1);
   };
 
   const paginatedTableJobs = useMemo(() => {
@@ -575,8 +610,10 @@ export default function App() {
             onLocationFilterChange={(val) => { setLocationFilter(val); setTablePage(1); }}
             appliedFilter={appliedFilter}
             onAppliedFilterChange={(val) => { setAppliedFilter(val); setTablePage(1); }}
-            favoriteFilter={favoriteFilter}
-            onFavoriteFilterChange={(val) => { setFavoriteFilter(val); setTablePage(1); }}
+            favoriteOnly={favoriteOnly}
+            onFavoriteOnlyChange={(val) => { setFavoriteOnly(val); setTablePage(1); }}
+            matchOnly={matchOnly}
+            onMatchOnlyChange={(val) => { setMatchOnly(val); setTablePage(1); }}
             dateFilter={dateFilter}
             onDateFilterChange={(val) => { setDateFilter(val); setTablePage(1); }}
             customDateRange={customDateRange}
