@@ -18,6 +18,8 @@ interface FilterToolbarProps {
   onAppliedFilterChange: (val: string) => void;
   dateFilter: string;
   onDateFilterChange: (val: string) => void;
+  favoriteFilter: string;
+  onFavoriteFilterChange: (val: string) => void;
   customDateRange: [Dayjs | null, Dayjs | null] | null;
   onCustomDateRangeChange: (dates: [Dayjs | null, Dayjs | null] | null) => void;
   isCustomDatePopoverOpen: boolean;
@@ -41,6 +43,8 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
   onAppliedFilterChange,
   dateFilter,
   onDateFilterChange,
+  favoriteFilter,
+  onFavoriteFilterChange,
   customDateRange,
   onCustomDateRangeChange,
   isCustomDatePopoverOpen,
@@ -52,7 +56,7 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
   return (
     <Card className={`rounded-lg ${isDark ? 'bg-[#0F172A] border-[#1E293B]' : 'bg-white border-[#E2E8F0]'}`} styles={{ body: { padding: '16px' } }}>
       <div className="space-y-3.5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
           <div>
             <Select
               value={statusFilter}
@@ -94,6 +98,18 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
                 { value: 'All', label: 'All Submissions' },
                 { value: 'Applied', label: 'Submitted (Locked)' },
                 { value: 'Not Applied', label: 'Not Yet Submitted' }
+              ]}
+            />
+          </div>
+
+          <div>
+            <Select
+              value={favoriteFilter}
+              onChange={onFavoriteFilterChange}
+              className="w-full"
+              options={[
+                { value: 'All', label: 'All Jobs' },
+                { value: 'Favorites', label: 'Favorites Only' }
               ]}
             />
           </div>

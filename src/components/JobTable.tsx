@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Table, Button, Tooltip, Select, Space, Empty } from 'antd';
+import { Card, Table, Button, Tooltip, Select, Space, Empty, Popover, Tag } from 'antd';
 import {
   ExternalLink,
   Building2,
@@ -10,7 +10,10 @@ import {
   Lock,
   Eye,
   Pencil,
-  Trash2
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Star
 } from 'lucide-react';
 import type { JobRecord } from '../utils/storageHelpers';
 import { STATUS_OPTIONS } from '../constants/jobConstants';
@@ -35,6 +38,7 @@ interface JobTableProps {
   onViewJob: (record: JobRecord) => void;
   onEditJob: (record: JobRecord) => void;
   onDeleteJob: (record: JobRecord) => void;
+  onToggleFavorite: (record: JobRecord) => void;
 }
 
 export const JobTable: React.FC<JobTableProps> = ({
@@ -54,7 +58,8 @@ export const JobTable: React.FC<JobTableProps> = ({
   onOpenManageRounds,
   onViewJob,
   onEditJob,
-  onDeleteJob
+  onDeleteJob,
+  onToggleFavorite
 }) => {
   const columns = [
     {
@@ -64,6 +69,74 @@ export const JobTable: React.FC<JobTableProps> = ({
       align: 'center' as const,
       render: (_: any, record: JobRecord) => {
         const showPortalIcon = !record.isApplied && record.portalUrl;
+
+        const normalizeStr = (val: any) => (val ? String(val).trim().toLowerCase() : '');
+        const normalizeUrl = (val: any) => {
+          let str = normalizeStr(val);
+          if (str) {
+            str = str.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+          }
+          return str;
+        };
+
+        const getMatchReasons = (job: JobRecord) => {
+          const reasons: { type: string; value: string }[] = [];
+          
+          const recCompany = normalizeStr(record.company);
+          const jobCompany = normalizeStr(job.company);
+          if (recCompany && jobCompany && recCompany === jobCompany) {
+            reasons.push({ type: 'Company', value: record.company });
+          }
+          
+          const recEmailOrig = (record as any).email || (record as any).companyEmail || '';
+          const jobEmailOrig = (job as any).email || (job as any).companyEmail || '';
+          if (normalizeStr(recEmailOrig) && normalizeStr(jobEmailOrig) && normalizeStr(recEmailOrig) === normalizeStr(jobEmailOrig)) {
+            reasons.push({ type: 'Email', value: String(recEmailOrig) });
+          }
+          
+          const recPhoneOrig = (record as any).phone || (record as any).companyPhone || '';
+          const jobPhoneOrig = (job as any).phone || (job as any).companyPhone || '';
+          if (normalizeStr(recPhoneOrig) && normalizeStr(jobPhoneOrig) && normalizeStr(recPhoneOrig) === normalizeStr(jobPhoneOrig)) {
+            reasons.push({ type: 'Phone', value: String(recPhoneOrig) });
+          }
+          
+          const recUrlOrig = record.portalUrl || (record as any).companyUrl || (record as any).url || '';
+          const jobUrlOrig = job.portalUrl || (job as any).companyUrl || (job as any).url || '';
+          if (normalizeUrl(recUrlOrig) && normalizeUrl(jobUrlOrig) && normalizeUrl(recUrlOrig) === normalizeUrl(jobUrlOrig)) {
+            reasons.push({ type: 'URL', value: String(recUrlOrig) });
+          }
+          
+          return reasons;
+        };
+
+        const matches = jobs.filter((job) => {
+          if (job.id === record.id) return false;
+          return getMatchReasons(job).length > 0;
+        });
+
+        const matchPopoverContent = (
+          <div className="w-72 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+            {matches.map(m => {
+              const reasons = getMatchReasons(m);
+              return (
+                <div key={m.id} className={`py-2.5 border-b last:border-0 ${isDark ? 'border-[#1E293B]' : 'border-[#E2E8F0]'}`}>
+                  <div className={`text-[13px] font-semibold mb-1.5 ${isDark ? 'text-[#F8FAFC]' : 'text-[#0F172A]'}`}>
+                    {m.role} <span className="font-normal opacity-75">at {m.company}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {reasons.map((r, i) => (
+                      <div key={i} className={`text-[12px] flex items-start gap-1.5 ${isDark ? 'text-[#94A3B8]' : 'text-[#64748B]'}`}>
+                        <span className="font-medium text-[#EF4444] shrink-0">{r.type}:</span>
+                        <span className="break-all">{r.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+
         return (
           <div className="min-w-0 text-left">
             <div className="flex items-center gap-1.5">
@@ -83,9 +156,34 @@ export const JobTable: React.FC<JobTableProps> = ({
                 </Tooltip>
               )}
             </div>
-            <div className={`flex items-center gap-1.5 text-[13px] mt-0.5 ${isDark ? 'text-[#94A3B8]' : 'text-[#475569]'}`}>
-              <Building2 className="w-3.5 h-3.5 text-[#6366F1] shrink-0" />
-              <span>{record.company}</span>
+            <div className={`flex items-center flex-wrap gap-1.5 text-[13px] mt-0.5 ${isDark ? 'text-[#94A3B8]' : 'text-[#475569]'}`}>
+              <div className="flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-[#6366F1] shrink-0" />
+                <span>{record.company}</span>
+              </div>
+              
+              {matches.length > 0 && (
+                <Popover
+                  content={matchPopoverContent}
+                  title={<span className={isDark ? 'text-[#F8FAFC]' : 'text-[#0F172A]'}>Similar Applications</span>}
+                  trigger="click"
+                  placement="right"
+                  overlayInnerStyle={{
+                    backgroundColor: isDark ? '#0F172A' : '#ffffff',
+                    borderColor: isDark ? '#1E293B' : '#E2E8F0',
+                    borderStyle: 'solid',
+                    borderWidth: '1px',
+                    boxShadow: isDark ? '0 10px 15px -3px rgba(0, 0, 0, 0.5)' : '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                  }}
+                  arrow={false}
+                >
+                  <Tag
+                    className="cursor-pointer m-0 px-1.5 rounded text-[11px] border transition-colors font-bold bg-[#EF4444]! text-white border-[#DC2626]! hover:bg-[#DC2626]!"
+                  >
+                    {matches.length} Match{matches.length > 1 ? 'es' : ''}
+                  </Tag>
+                </Popover>
+              )}
             </div>
           </div>
         );
@@ -250,10 +348,18 @@ export const JobTable: React.FC<JobTableProps> = ({
     {
       title: 'Actions',
       key: 'actions',
-      width: 175,
+      width: 220,
       align: 'center' as const,
       render: (_: any, record: JobRecord) => (
-        <Space size={15} className="justify-center">
+        <Space size={10} className="justify-center">
+          <Tooltip title={record.isFavorite ? "Remove from Favorites" : "Add to Favorites"}>
+            <Button
+              size="middle"
+              icon={<Star className={`w-4 h-4 ${record.isFavorite&&"text-white!"}`} fill={record.isFavorite ? "white" : "none"} />}
+              onClick={() => onToggleFavorite(record)}
+              className={`inline-flex items-center justify-center w-9 h-9 rounded-md border transition-all ${record.isFavorite&&"border-[#ff1493]! bg-[#ff1493]!"}`}
+            />
+          </Tooltip>
           <Tooltip title="View full details">
             <Button
               size="middle"
@@ -337,22 +443,45 @@ export const JobTable: React.FC<JobTableProps> = ({
       />
 
       {totalJobs > 0 && (
-        <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3.5 border-t ${isDark ? 'bg-[#0F172A] border-[#293548]' : 'bg-white border-[#CBD5E1]'}`}>
+        <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3.5 border-t ${isDark ? 'bg-[#0F172A] border-[#293548]' : 'bg-white border-[#CBD5E1]'}`}>
           <span className={`text-[13px] ${isDark ? 'text-[#94A3B8]' : 'text-[#475569]'}`}>
-            Showing <strong className={isDark ? 'text-[#F8FAFC]' : 'text-[#0F172A]'}>{(tablePage - 1) * tablePageSize + 1}–{Math.min(tablePage * tablePageSize, totalJobs)}</strong> of {totalJobs} jobs (Page {tablePage} of {totalTablePages})
+            Showing <strong className={isDark ? 'text-[#F8FAFC]' : 'text-[#0F172A]'}>{(tablePage - 1) * tablePageSize + 1}–{Math.min(tablePage * tablePageSize, totalJobs)}</strong> of {totalJobs} jobs
           </span>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Select
-              showSearch={false}
-              value={tablePage}
-              onChange={(page) => onPageChange(page, tablePageSize)}
-              className="w-28 text-[13px]"
-              options={Array.from({ length: totalTablePages }, (_, i) => ({
-                value: i + 1,
-                label: `Page ${i + 1}`
-              }))}
-            />
+          <div className="flex flex-wrap items-center gap-5">
+            <div className="flex items-center gap-2">
+              <span className={`text-[13px] ${isDark ? 'text-[#94A3B8]' : 'text-[#475569]'}`}>Rows per page:</span>
+              <Select
+                showSearch={false}
+                value={tablePageSize}
+                onChange={(size) => onPageChange(1, size)}
+                className="w-20 text-[13px]"
+                options={[5, 10, 25, 50, 100].map(s => ({
+                  value: s,
+                  label: String(s)
+                }))}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="small"
+                className="flex items-center justify-center w-8 h-8 rounded-md"
+                disabled={tablePage === 1}
+                onClick={() => onPageChange(tablePage - 1, tablePageSize)}
+                icon={<ChevronLeft className="w-4 h-4" />}
+              />
+              <span className={`text-[13px] font-medium px-2 min-w-[50px] text-center ${isDark ? 'text-[#F8FAFC]' : 'text-[#0F172A]'}`}>
+                {tablePage} / {totalTablePages}
+              </span>
+              <Button
+                size="small"
+                className="flex items-center justify-center w-8 h-8 rounded-md"
+                disabled={tablePage === totalTablePages}
+                onClick={() => onPageChange(tablePage + 1, tablePageSize)}
+                icon={<ChevronRight className="w-4 h-4" />}
+              />
+            </div>
           </div>
         </div>
       )}

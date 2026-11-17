@@ -72,6 +72,7 @@ export default function App() {
   const [workModeFilter, setWorkModeFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
   const [appliedFilter, setAppliedFilter] = useState('All');
+  const [favoriteFilter, setFavoriteFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('All');
   const [customDateRange, setCustomDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [isCustomDatePopoverOpen, setIsCustomDatePopoverOpen] = useState(false);
@@ -129,6 +130,7 @@ export default function App() {
       if (locationFilter !== 'All' && job.location !== locationFilter) return false;
       if (appliedFilter === 'Applied' && !job.isApplied) return false;
       if (appliedFilter === 'Not Applied' && job.isApplied) return false;
+      if (favoriteFilter === 'Favorites' && !job.isFavorite) return false;
 
       if (dateFilter === 'Not Applied') {
         if (job.isApplied) return false;
@@ -171,7 +173,7 @@ export default function App() {
 
       return true;
     });
-  }, [jobs, searchQuery, statusFilter, workModeFilter, locationFilter, appliedFilter, dateFilter, customDateRange]);
+  }, [jobs, searchQuery, statusFilter, workModeFilter, locationFilter, appliedFilter, favoriteFilter, dateFilter, customDateRange]);
 
   const stats = useMemo(() => {
     let pending = 0;
@@ -201,6 +203,7 @@ export default function App() {
     workModeFilter !== 'All' ||
     locationFilter !== 'All' ||
     appliedFilter !== 'All' ||
+    favoriteFilter !== 'All' ||
     dateFilter !== 'All' ||
     customDateRange !== null;
 
@@ -210,9 +213,11 @@ export default function App() {
     setWorkModeFilter('All');
     setLocationFilter('All');
     setAppliedFilter('All');
+    setFavoriteFilter('All');
     setDateFilter('All');
     setCustomDateRange(null);
     setIsCustomDatePopoverOpen(false);
+    setTablePage(1); // Reset page on clear filters
   };
 
   const paginatedTableJobs = useMemo(() => {
@@ -423,6 +428,15 @@ export default function App() {
     });
   };
 
+  const handleToggleFavorite = async (record: JobRecord) => {
+    const newFavStatus = !record.isFavorite;
+    const updated = jobs.map((job) =>
+      job.id === record.id ? { ...job, isFavorite: newFavStatus } : job
+    );
+    await persistJobs(updated);
+    messageApi.success(newFavStatus ? `Added ${record.company} to favorites` : `Removed ${record.company} from favorites`);
+  };
+
   const handleDeleteToTrash = (record: JobRecord) => {
     modalApi.confirm({
       title: <span className={isDark ? 'text-[#F8FAFC]' : 'text-[#0F172A]'}>Move Job Application to Trash?</span>,
@@ -552,19 +566,21 @@ export default function App() {
           <FilterToolbar
             isDark={isDark}
             searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
+            onSearchChange={(val) => { setSearchQuery(val); setTablePage(1); }}
             statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
+            onStatusFilterChange={(val) => { setStatusFilter(val); setTablePage(1); }}
             workModeFilter={workModeFilter}
-            onWorkModeFilterChange={setWorkModeFilter}
+            onWorkModeFilterChange={(val) => { setWorkModeFilter(val); setTablePage(1); }}
             locationFilter={locationFilter}
-            onLocationFilterChange={setLocationFilter}
+            onLocationFilterChange={(val) => { setLocationFilter(val); setTablePage(1); }}
             appliedFilter={appliedFilter}
-            onAppliedFilterChange={setAppliedFilter}
+            onAppliedFilterChange={(val) => { setAppliedFilter(val); setTablePage(1); }}
+            favoriteFilter={favoriteFilter}
+            onFavoriteFilterChange={(val) => { setFavoriteFilter(val); setTablePage(1); }}
             dateFilter={dateFilter}
-            onDateFilterChange={setDateFilter}
+            onDateFilterChange={(val) => { setDateFilter(val); setTablePage(1); }}
             customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
+            onCustomDateRangeChange={(dates) => { setCustomDateRange(dates); setTablePage(1); }}
             isCustomDatePopoverOpen={isCustomDatePopoverOpen}
             onCustomDatePopoverOpenChange={setIsCustomDatePopoverOpen}
             cityOptions={cityOptions}
@@ -591,6 +607,7 @@ export default function App() {
             onOpenAddModal={handleOpenAddModal}
             onMarkApplied={handleMarkApplied}
             onStatusChange={handleStatusChange}
+            onToggleFavorite={handleToggleFavorite}
             onOpenManageRounds={(record: JobRecord) => {
               setManagingRoundsJob(record);
               setTempRounds(record.interviewRounds?.length ? [...record.interviewRounds] : [{ id: `r-${Date.now()}`, name: 'Round 1 (Technical)', date: getTodayISO(), status: 'Scheduled' }]);

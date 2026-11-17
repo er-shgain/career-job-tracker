@@ -3,6 +3,7 @@ import { WORK_MODES, STATUS_OPTIONS } from '../constants/jobConstants';
 import type { JobStatus, WorkMode } from '../constants/jobConstants';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { APP_MODE } from '../mode';
 
 export interface InterviewRound {
   id: string;
@@ -20,6 +21,7 @@ export interface JobRecord {
   location: string;
   expectedCtc: number;
   isApplied: boolean;
+  isFavorite?: boolean;
   appliedDate: string | null;
   status: JobStatus;
   interviewRounds: InterviewRound[];
@@ -47,6 +49,7 @@ export const sanitizeJobRecord = (raw: any): JobRecord => {
     location: String(raw?.location || 'Kolkata').trim(),
     expectedCtc: Number(raw?.expectedCtc) || 6.0,
     isApplied,
+    isFavorite: Boolean(raw?.isFavorite),
     appliedDate: isApplied ? raw?.appliedDate || getTodayISO() : null,
     status: isApplied ? validStatus : 'Pending',
     interviewRounds: Array.isArray(raw?.interviewRounds) ? raw.interviewRounds : [],
@@ -63,8 +66,60 @@ export const sanitizeJobRecord = (raw: any): JobRecord => {
   };
 };
 
+// DEV MODE CONSTANTS & SAMPLE DATA
+const DEV_JOBS_KEY = 'career_tracker_dev_jobs';
+const DEV_TRASH_KEY = 'career_tracker_dev_trash';
+
+const getSampleJobs = (): JobRecord[] => [
+  sanitizeJobRecord({
+    id: 'sample-job-1',
+    role: 'Frontend React Developer',
+    company: 'TechNova Solutions',
+    workMode: 'Remote',
+    location: 'Bengaluru',
+    expectedCtc: 8.5,
+    isApplied: true,
+    isFavorite: true,
+    appliedDate: getTodayISO(),
+    status: 'Interview',
+    interviewRounds: [
+      { id: `r-${Date.now()}-1`, name: 'Round 1 (Technical)', date: getTodayISO(), status: 'Scheduled', notes: 'Focus on React & Hooks' }
+    ]
+  }),
+  sanitizeJobRecord({
+    id: 'sample-job-2',
+    role: 'Full Stack Engineer',
+    company: 'Global Innovations Inc.',
+    workMode: 'Hybrid',
+    location: 'Kolkata',
+    expectedCtc: 12.0,
+    isApplied: false,
+    isFavorite: false,
+    status: 'Pending',
+    portalUrl: 'https://example.com/careers'
+  })
+];
 
 export const loadJobsFromCloud = async (): Promise<JobRecord[]> => {
+  if (APP_MODE === 'dev') {
+    try {
+      const stored = localStorage.getItem(DEV_JOBS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed.map(sanitizeJobRecord);
+      } else {
+        // Load initial sample data if local storage is empty
+        const samples = getSampleJobs();
+        localStorage.setItem(DEV_JOBS_KEY, JSON.stringify(samples));
+        return samples;
+      }
+    } catch (err) {
+      console.error('Local storage read error:', err);
+    }
+    return [];
+  }
+
+  // Production (Firebase) Logic
   try {
     const ref = doc(db, 'tracker_data', 'jobs');
     const snap = await getDoc(ref);
@@ -78,6 +133,12 @@ export const loadJobsFromCloud = async (): Promise<JobRecord[]> => {
 };
 
 export const saveJobsToCloud = async (jobs: JobRecord[]): Promise<void> => {
+  if (APP_MODE === 'dev') {
+    localStorage.setItem(DEV_JOBS_KEY, JSON.stringify(jobs));
+    return;
+  }
+
+  // Production (Firebase) Logic
   try {
     const ref = doc(db, 'tracker_data', 'jobs');
     await setDoc(ref, { items: jobs });
@@ -87,6 +148,20 @@ export const saveJobsToCloud = async (jobs: JobRecord[]): Promise<void> => {
 };
 
 export const loadTrashFromCloud = async (): Promise<JobRecord[]> => {
+  if (APP_MODE === 'dev') {
+    try {
+      const stored = localStorage.getItem(DEV_TRASH_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed.map(sanitizeJobRecord);
+      }
+    } catch (err) {
+      console.error('Local storage read error:', err);
+    }
+    return [];
+  }
+
+  // Production (Firebase) Logic
   try {
     const ref = doc(db, 'tracker_data', 'trash');
     const snap = await getDoc(ref);
@@ -100,6 +175,12 @@ export const loadTrashFromCloud = async (): Promise<JobRecord[]> => {
 };
 
 export const saveTrashToCloud = async (trash: JobRecord[]): Promise<void> => {
+  if (APP_MODE === 'dev') {
+    localStorage.setItem(DEV_TRASH_KEY, JSON.stringify(trash));
+    return;
+  }
+
+  // Production (Firebase) Logic
   try {
     const ref = doc(db, 'tracker_data', 'trash');
     await setDoc(ref, { items: trash });
