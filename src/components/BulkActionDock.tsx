@@ -1,6 +1,6 @@
 import React from 'react';
-import { Button, Select } from 'antd';
-import { Trash2 } from 'lucide-react';
+import { Button, Select, message } from 'antd';
+import { Trash2, Download } from 'lucide-react';
 import { STATUS_OPTIONS } from '../constants/jobConstants';
 import type { JobStatus } from '../constants/jobConstants';
 import type { JobRecord } from '../utils/storageHelpers';
@@ -23,6 +23,20 @@ export const BulkActionDock: React.FC<BulkActionDockProps> = ({
   onBatchDelete
 }) => {
   if (selectedRowKeys.length === 0) return null;
+
+  const handleExportSelectedJson = () => {
+    const jsonString = JSON.stringify(selectedJobs, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `selected-jobs-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    message.success(`Downloaded ${selectedJobs.length} job${selectedJobs.length > 1 ? 's' : ''} as JSON`);
+  };
 
   return (
     <div className="fixed bottom-5 inset-x-0 z-40 px-4 pointer-events-none">
@@ -49,6 +63,14 @@ export const BulkActionDock: React.FC<BulkActionDockProps> = ({
             className="w-44 text-[13px]"
             options={STATUS_OPTIONS.map((st) => ({ value: st, label: st }))}
           />
+          <Button
+            size="middle"
+            icon={<Download className="w-4 h-4" />}
+            onClick={handleExportSelectedJson}
+            className={`font-medium rounded-md px-3.5 ${isDark ? 'bg-[#0F172A] border-[#334155] text-[#F8FAFC] hover:border-[#6366F1]' : 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] hover:border-[#6366F1]'}`}
+          >
+            Export JSON
+          </Button>
           <Button
             size="middle"
             danger

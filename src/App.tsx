@@ -72,8 +72,8 @@ export default function App() {
   const [workModeFilter, setWorkModeFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
   const [appliedFilter, setAppliedFilter] = useState('All');
-  const [favoriteOnly, setFavoriteOnly] = useState(false);
-  const [matchOnly, setMatchOnly] = useState(false);
+  const [favoriteFilter, setFavoriteFilter] = useState('All');
+  const [matchFilter, setMatchFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('All');
   const [customDateRange, setCustomDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [isCustomDatePopoverOpen, setIsCustomDatePopoverOpen] = useState(false);
@@ -104,7 +104,7 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
-    } catch {}
+    } catch { }
   }, [isDark]);
 
   const cityOptions = useMemo(() => {
@@ -141,16 +141,16 @@ export default function App() {
 
       return allJobs.some(other => {
         if (other.id === job.id) return false;
-        
+
         const oComp = normalizeStr(other.company);
         const oEmail = normalizeStr((other as any).email || (other as any).companyEmail);
         const oPhone = normalizeStr((other as any).phone || (other as any).companyPhone);
         const oUrl = normalizeUrl(other.portalUrl || (other as any).companyUrl || (other as any).url);
 
         return (jComp && oComp && jComp === oComp) ||
-               (jEmail && oEmail && jEmail === oEmail) ||
-               (jPhone && oPhone && jPhone === oPhone) ||
-               (jUrl && oUrl && jUrl === oUrl);
+          (jEmail && oEmail && jEmail === oEmail) ||
+          (jPhone && oPhone && jPhone === oPhone) ||
+          (jUrl && oUrl && jUrl === oUrl);
       });
     };
 
@@ -162,8 +162,15 @@ export default function App() {
       if (locationFilter !== 'All' && job.location !== locationFilter) return false;
       if (appliedFilter === 'Applied' && !job.isApplied) return false;
       if (appliedFilter === 'Not Applied' && job.isApplied) return false;
-      if (favoriteOnly && !job.isFavorite) return false;
-      if (matchOnly && !hasMatch(job, jobs)) return false;
+
+      if (favoriteFilter === 'Favorite' && !job.isFavorite) return false;
+      if (favoriteFilter === 'Not Favorite' && job.isFavorite) return false;
+
+      if (matchFilter !== 'All') {
+        const matched = hasMatch(job, jobs);
+        if (matchFilter === 'Match' && !matched) return false;
+        if (matchFilter === 'No Match' && matched) return false;
+      }
 
       if (dateFilter === 'Not Applied') {
         if (job.isApplied) return false;
@@ -206,7 +213,7 @@ export default function App() {
 
       return true;
     });
-  }, [jobs, searchQuery, statusFilter, workModeFilter, locationFilter, appliedFilter, favoriteOnly, matchOnly, dateFilter, customDateRange]);
+  }, [jobs, searchQuery, statusFilter, workModeFilter, locationFilter, appliedFilter, favoriteFilter, matchFilter, dateFilter, customDateRange]);
 
   const stats = useMemo(() => {
     let pending = 0;
@@ -236,8 +243,8 @@ export default function App() {
     workModeFilter !== 'All' ||
     locationFilter !== 'All' ||
     appliedFilter !== 'All' ||
-    favoriteOnly ||
-    matchOnly ||
+    favoriteFilter !== 'All' ||
+    matchFilter !== 'All' ||
     dateFilter !== 'All' ||
     customDateRange !== null;
 
@@ -247,8 +254,8 @@ export default function App() {
     setWorkModeFilter('All');
     setLocationFilter('All');
     setAppliedFilter('All');
-    setFavoriteOnly(false);
-    setMatchOnly(false);
+    setFavoriteFilter('All');
+    setMatchFilter('All');
     setDateFilter('All');
     setCustomDateRange(null);
     setIsCustomDatePopoverOpen(false);
@@ -287,6 +294,20 @@ export default function App() {
       JSON.stringify(modalRounds) !== JSON.stringify(editingJob.interviewRounds || [])
     );
   }, [editingJob, formValues, modalRounds]);
+
+  const downloadJsonFile = (data: unknown, filename: string, label: string) => {
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    messageApi.success(label);
+  };
 
   const handleOpenAddModal = () => {
     setEditingJob(null);
@@ -352,22 +373,22 @@ export default function App() {
       newJobsList = newJobsList.map((item) =>
         item.id === editingJob.id
           ? {
-              ...item,
-              role: values.role.trim(),
-              company: values.company.trim(),
-              workMode: values.workMode,
-              location: values.location,
-              expectedCtc: Number(values.expectedCtc) || 0,
-              isApplied: finalIsApplied,
-              appliedDate: formattedDate,
-              status: finalStatus,
-              interviewRounds: updatedRounds,
-              savedInterviewRounds: updatedSavedRounds,
-              companyEmail: values.companyEmail ? values.companyEmail.trim() : '',
-              companyPhone: values.companyPhone ? values.companyPhone.trim() : '',
-              portalUrl: sanitizedUrl,
-              notes: values.notes ? values.notes.trim() : ''
-            }
+            ...item,
+            role: values.role.trim(),
+            company: values.company.trim(),
+            workMode: values.workMode,
+            location: values.location,
+            expectedCtc: Number(values.expectedCtc) || 0,
+            isApplied: finalIsApplied,
+            appliedDate: formattedDate,
+            status: finalStatus,
+            interviewRounds: updatedRounds,
+            savedInterviewRounds: updatedSavedRounds,
+            companyEmail: values.companyEmail ? values.companyEmail.trim() : '',
+            companyPhone: values.companyPhone ? values.companyPhone.trim() : '',
+            portalUrl: sanitizedUrl,
+            notes: values.notes ? values.notes.trim() : ''
+          }
           : item
       );
       messageApi.success(`Updated ${values.role} at ${values.company}`);
@@ -580,7 +601,6 @@ export default function App() {
             }}
           />
         )}
-
         <Header
           isDark={isDark}
           onToggleTheme={() => setIsDark((prev) => !prev)}
@@ -589,6 +609,27 @@ export default function App() {
           trashCount={trash.length}
           onOpenTrash={() => setIsTrashOpen(true)}
           onOpenAddModal={handleOpenAddModal}
+          onDownloadAll={() =>
+            downloadJsonFile(
+              { active: jobs, trash },
+              `all-jobs-backup-${getTodayISO()}.json`,
+              `Downloaded all (${jobs.length} active, ${trash.length} trash)`
+            )
+          }
+          onDownloadActive={() =>
+            downloadJsonFile(
+              jobs,
+              `active-jobs-${getTodayISO()}.json`,
+              `Downloaded ${jobs.length} active jobs`
+            )
+          }
+          onDownloadTrash={() =>
+            downloadJsonFile(
+              trash,
+              `trash-jobs-${getTodayISO()}.json`,
+              `Downloaded ${trash.length} trashed jobs`
+            )
+          }
         />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5 pb-28">
@@ -610,10 +651,10 @@ export default function App() {
             onLocationFilterChange={(val) => { setLocationFilter(val); setTablePage(1); }}
             appliedFilter={appliedFilter}
             onAppliedFilterChange={(val) => { setAppliedFilter(val); setTablePage(1); }}
-            favoriteOnly={favoriteOnly}
-            onFavoriteOnlyChange={(val) => { setFavoriteOnly(val); setTablePage(1); }}
-            matchOnly={matchOnly}
-            onMatchOnlyChange={(val) => { setMatchOnly(val); setTablePage(1); }}
+            favoriteFilter={favoriteFilter}
+            onFavoriteFilterChange={(val) => { setFavoriteFilter(val); setTablePage(1); }}
+            matchFilter={matchFilter}
+            onMatchFilterChange={(val) => { setMatchFilter(val); setTablePage(1); }}
             dateFilter={dateFilter}
             onDateFilterChange={(val) => { setDateFilter(val); setTablePage(1); }}
             customDateRange={customDateRange}
@@ -625,7 +666,7 @@ export default function App() {
             onResetFilters={clearAllFilters}
           />
 
-          <div className="my-5" /> 
+          <div className="my-5" />
 
           <JobTable
             isDark={isDark}

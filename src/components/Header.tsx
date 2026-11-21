@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button, Tooltip, Badge } from 'antd';
-import { Briefcase, Sun, Moon, HelpCircle, Plus, Trash2 } from 'lucide-react';
+import { Button, Tooltip, Badge, Dropdown } from 'antd';
+import type { MenuProps } from 'antd';
+import { Briefcase, Sun, Moon, HelpCircle, Plus, Trash2, Download, Layers, CheckCircle2 } from 'lucide-react';
 
 interface HeaderProps {
   isDark: boolean;
@@ -10,6 +11,9 @@ interface HeaderProps {
   trashCount: number;
   onOpenTrash: () => void;
   onOpenAddModal: () => void;
+  onDownloadAll: () => void;
+  onDownloadActive: () => void;
+  onDownloadTrash: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,8 +23,32 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleQuickGuide,
   trashCount,
   onOpenTrash,
-  onOpenAddModal
+  onOpenAddModal,
+  onDownloadAll,
+  onDownloadActive,
+  onDownloadTrash
 }) => {
+  const downloadMenuItems: MenuProps['items'] = [
+    {
+      key: 'all',
+      icon: <Layers className="w-4 h-4 text-[#6366F1]" />,
+      label: 'Download All (Active + Trash)',
+      onClick: onDownloadAll,
+    },
+    {
+      key: 'active',
+      icon: <CheckCircle2 className="w-4 h-4 text-[#10B981]" />,
+      label: 'Download All Active',
+      onClick: onDownloadActive,
+    },
+    {
+      key: 'trash',
+      icon: <Trash2 className="w-4 h-4 text-[#F43F5E]" />,
+      label: 'Download All Trash',
+      onClick: onDownloadTrash,
+    },
+  ];
+
   return (
     <header className={`sticky top-0 z-30 border-b backdrop-blur-md ${isDark ? 'bg-[#090D16]/85 border-[#1E293B]' : 'bg-white/90 border-[#E2E8F0]'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
@@ -59,6 +87,15 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline">{isDark ? 'Light' : 'Dark'}</span>
             </Button>
           </Tooltip>
+
+          <Dropdown menu={{ items: downloadMenuItems }} trigger={['click']} placement="bottomRight">
+            <Button
+              icon={<Download className="w-4 h-4 text-[#06B6D4]" />}
+              className="rounded-md font-medium"
+            >
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+          </Dropdown>
 
           <Tooltip title="View Trash (Deleted Applications)">
             <Badge count={trashCount} offset={[-2, 2]}>
